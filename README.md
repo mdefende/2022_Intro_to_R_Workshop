@@ -11,11 +11,11 @@ There are some brief instructions for users prior to the beginning of the worksh
 2. Click on Interactive Apps > RStudio Server
 
 3. Use the following inputs for the job:
-   a. R Version: 4.0.2
-   b. Number of Hours: 4
-   c. Partition: short
-   d. Number of CPU: 1
-   e. Memory Per CPU: 8
+   - R Version: 4.0.2
+   - Number of Hours: 4
+   - Partition: short
+   - Number of CPU: 1
+   - Memory Per CPU: 8
 
 4. Click `Launch`. The job will be entered into the queue. The card created for the job will remain grayed out while the job is being scheduled. This may take a little while depending on the cluster workload. Once the card turns green, the job will have been allocated resources and you will have access to the RStudio program
 
