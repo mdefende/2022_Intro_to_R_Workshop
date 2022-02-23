@@ -1,0 +1,71 @@
+---
+title: "Tuition Data Creation and Cleaning"
+author: "Matt Defenderfer"
+date: "2/22/2022"
+output: html_document
+---
+
+```{r libraries}
+library(janitor)
+library(tidyverse)
+```
+
+
+This document shows how the dataset used in the Intro to R Workshop during Research Computing Day 2022 was created. Multiple pieces of data individual data were cleaned and combined together. The pieces of data are as follows:
+
+1. `tuition_cost` data provided by the March 3, 2020 entry of Tidy Tuesday. This entry can be found at https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-03-10/readme.md
+2. 
+
+
+##  Cost of Attendence
+
+```{r read CoA data}
+# read in data, clean variable names, remove unit id, institution alias, street address, and city, and finally rename institution and state variables
+cost_attendance <- read_csv('/Users/Matthew/Downloads/cost-attendance.csv') %>%
+  clean_names() %>%
+  select(-unit_id, -institution_name_alias_hd2016, -street_address_or_post_office_box_hd2016, -city_location_of_institution_hd2016) %>%
+  rename(name = institution_name,
+         state_code = state_abbreviation_hd2016)
+```
+
+
+```{r}
+# Separate year from type of cost and store type of cost in its own column 'measure'
+v <- cost_attendance %>%
+  pivot_longer(cols = contains(c('total','published')), 
+               names_to = c('measure','.value'), 
+               names_pattern = '(.*)_(20[\\d]{2}_[\\d]{2}).*', 
+               values_to = 'cost')
+```
+
+```{r}
+# separate the measure column into three separate variables of cost type (published vs. total), in-state or out-of-state, and living with parents or not
+v <- v %>%
+  mutate(cost_type = if_else(str_detect(measure,'published'),'published','actual'),
+         
+         in_state = if_else(str_detect(measure,'in_state'), 'in', 'out'),
+         
+         on_campus = case_when(
+           str_detect(measure,'on_campus') ~ 'on',
+           str_detect(measure,'off_campus') ~ 'off'),
+         
+         living_with_family = case_when(
+           str_detect(measure,'not_with_family') ~ 'without',
+           str_detect(measure,'with_family') ~ 'with')) %>%
+  relocate(cost_type:living_with_family, .after = measure) %>%
+  select(-measure)
+```
+
+```{r}
+# rename year columns to be academic year. So 2017_18 will become AY2017
+v <- v %>%
+  rename_with(~str_remove(.,'_[\\d]{2}'), contains('20')) %>%
+  rename_with(~paste0('AY',.), contains('20'))
+```
+
+```{r}
+# only keep data that has values for all academic years for all categories
+v %>% 
+  filter(if_all(contains('AY'), ~!is.na(.)))
+```
+
