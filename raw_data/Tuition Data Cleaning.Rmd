@@ -1,0 +1,138 @@
+---
+title: "Tuition Data Creation and Cleaning"
+author: "Matt Defenderfer"
+date: "2/22/2022"
+output: html_document
+---
+
+```{r libraries}
+library(janitor)
+library(tidyverse)
+```
+
+
+This document shows how the dataset used in the Intro to R Workshop during Research Computing Day 2022 was created. Multiple pieces of data individual data were cleaned and combined together. The pieces of data are as follows:
+
+1. `tuition_cost` data provided by the March 3, 2020 entry of Tidy Tuesday. This entry can be found at https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-03-10/readme.md
+2. 
+
+
+##  Cost of Attendence
+
+```{r read CoA data}
+# read in data, clean variable names, remove unit id, institution alias, street address, and city, and finally rename institution and state variables
+cost_attendance_raw <- read_csv('cost-attendance.csv') %>%
+  clean_names() %>%
+  select(-unit_id, -institution_name_alias_hd2016, -street_address_or_post_office_box_hd2016, -city_location_of_institution_hd2016) %>%
+  rename(name = institution_name,
+         state_code = state_abbreviation_hd2016)
+```
+
+```{r}
+# Separate year from type of cost and store type of cost in its own column 'measure'
+cost_attendance <- cost_attendance_raw %>%
+  pivot_longer(cols = contains(c('total','published')), 
+               names_to = c('measure','.value'), 
+               names_pattern = '(.*)_(20[\\d]{2}_[\\d]{2}).*', 
+               values_to = 'cost')
+```
+
+```{r}
+# separate the measure column into three separate variables of cost type (published vs. total), in-state or out-of-state, and living with parents or not
+cost_attendance <- cost_attendance %>%
+  mutate(cost_type = if_else(str_detect(measure,'published'),'published','actual'),
+         
+         in_state = if_else(str_detect(measure,'in_state'), 'in', 'out'),
+         
+         on_campus = case_when(
+           str_detect(measure,'on_campus') ~ 'on',
+           str_detect(measure,'off_campus') ~ 'off'),
+         
+         living_with_family = case_when(
+           str_detect(measure,'not_with_family') ~ 'without',
+           str_detect(measure,'with_family') ~ 'with')) %>%
+  relocate(cost_type:living_with_family, .after = measure) %>%
+  select(-measure)
+
+# remove off campus category to simplify the data. This also functionally removes the living_with_parents category since living with and without parents was predicated on the individual living off campus. Now, it will be in-state vs. out-of-state for on-campus students only
+cost_attendance <- cost_attendance %>% 
+  filter(on_campus %in% c('on',NA)) %>%
+  select(-living_with_family,-on_campus)
+```
+
+```{r}
+# rename year columns to be academic year. So 2017_18 will become AY2017
+cost_attendance <- cost_attendance %>%
+  rename_with(~str_remove(.,'_[\\d]{2}'), contains('20')) %>%
+  rename_with(~paste0('AY',.), contains('20'))
+```
+
+```{r}
+# remove AY2008, has missing data from at least one measure in every school.
+cost_attendance <- cost_attendance %>%
+  select(-AY2008)
+```
+
+```{r}
+# only keep data that has values for all academic years for all categories
+keep_schools <- cost_attendance %>%
+  group_by(name) %>%
+  summarize(across(contains('AY'),~all(!is.na(.)))) %>%
+  filter(if_all(contains('AY'), ~ . == TRUE)) %>%
+  select(name)
+
+cost_attendance <- cost_attendance %>%
+  filter(name %in% keep_schools$name)
+```
+
+## Merge TidyTuesday Data
+
+The Tidy Tuesday version of these data have useful information about the colleges in the `tuition_cost` dataset. All we want from this dataset is the type of university and the degree length the college is. The costs listed in these data are for a single year only, which isn't useful when we want to examine trends over time
+
+```{r load tuition_cost data}
+# read in the data and only keep the variables that are a character data type
+tuition_cost <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/tuition_cost.csv') %>%
+  select(where(is.character))
+```
+
+```{r merge tuition_cost with cost_attendance}
+cost_attendance <- tuition_cost %>%
+  right_join(cost_attendance, by = c('name','state_code'))
+```
+
+
+## Graduation Rate
+
+```{r load graduation rate data}
+graduation <- read_csv('grad-rates.csv') %>%
+  clean_names() %>%
+  select(unit_id,institution_name,state_abbreviation_hd2016,contains('grand_total')) %>%
+  select(unit_id,institution_name,state_abbreviation_hd2016,contains('rate')) %>%
+  rename(name = institution_name,
+         state_code = state_abbreviation_hd2016)
+```
+
+```{r}
+# remaining grad rate variables have 4-year or 2-year college information in them, but each college is only one type, so all colleges have half data as NA. Easiest way to remove these rows is to pivot the table and put the year+college type in a single column and the rate in another column. Can also easily extract year information only
+
+graduation <- graduation %>%
+  pivot_longer(contains('rate'), names_to = 'year', values_to = 'rate') %>%
+  mutate(year = paste0('AY',str_extract(year, '20[\\d]{2}')))
+```
+
+
+```{r}
+# only want colleges with graduation rates for all 6 years, so pivot wider (also sets up a pivot example during the course if the data is wide to begin with) and filter for colleges that have data for all 6 years
+
+graduation <- graduation %>%
+  pivot_wider(names_from = year, values_from = rate) %>%
+  filter(if_all(contains('AY'),~!is.na(.)))
+```
+
+## Write Cleaned Data
+
+```{r}
+write_csv(cost_attendance,'../cleaned_data/cost_of_attendance.csv')
+write_csv(graduation,'../cleaned_data/graduation_rate.csv')
+```
+
