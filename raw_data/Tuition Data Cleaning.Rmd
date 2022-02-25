@@ -37,9 +37,9 @@ cost_attendance <- cost_attendance_raw %>%
 ```
 
 ```{r}
-# separate the measure column into three separate variables of cost type (published vs. total), in-state or out-of-state, and living with parents or not
+# separate the measure column into three separate variables of cost type (tuition+fees only vs. total), in-state or out-of-state, and living with parents or not
 cost_attendance <- cost_attendance %>%
-  mutate(cost_type = if_else(str_detect(measure,'published'),'published','actual'),
+  mutate(cost_type = if_else(str_detect(measure,'published'),'tuition','total'),
          
          in_state = if_else(str_detect(measure,'in_state'), 'in', 'out'),
          
@@ -116,7 +116,8 @@ graduation <- read_csv('grad-rates.csv') %>%
 
 graduation <- graduation %>%
   pivot_longer(contains('rate'), names_to = 'year', values_to = 'rate') %>%
-  mutate(year = paste0('AY',str_extract(year, '20[\\d]{2}')))
+  mutate(year = paste0('AY',str_extract(year, '20[\\d]{2}'))) %>%
+  filter(!is.na(rate))
 ```
 
 
