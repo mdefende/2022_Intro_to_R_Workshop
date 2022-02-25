@@ -13,7 +13,7 @@ There are some brief instructions for users prior to the beginning of the worksh
 3. Use the following inputs for the job:
    - R Version: 4.0.2
    - Number of Hours: 4
-   - Partition: short
+   - Partition: amd-hdr100
    - Number of CPU: 1
    - Memory Per CPU: 8
 
