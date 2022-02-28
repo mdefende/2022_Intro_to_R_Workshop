@@ -117,7 +117,7 @@ cost_attendance <- inst_info %>%
 ```
 
 
-## Graduation Rate and Degree Type
+### Graduation Rate and Degree Type
 
 ```{r load graduation rate data}
 graduation <- read_csv('grad-rates.csv') %>%
@@ -151,14 +151,9 @@ graduation <- graduation %>%
 ```{r write cleaned data}
 # filter out some of the variables to make the data more succinct. Only need costs for on-campus students. Also remove all colleges who do not have data for all years
 cost_attendance %>%
-  filter(on_campus == 'on') %>%
-  filter(if_all(where(is.numeric),~!is.na(.))) %>%
-  select(-on_campus,-living_with_family)
+  filter(if_all(everything(),~!is.na(.))) %>%
+  write_csv('../cleaned_data/cost_of_attendance.csv')
 
-# somehow removed only tuition cost from the table, need to go back and check where.
-
-  
-write_csv('../cleaned_data/cost_of_attendance.csv')
 write_csv(graduation,'../cleaned_data/graduation_rate.csv')
 ```
 
