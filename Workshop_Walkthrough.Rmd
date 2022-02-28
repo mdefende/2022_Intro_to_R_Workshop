@@ -85,9 +85,11 @@ glimpse(cost_attendance)
 ```
 
 
-## Average Cost of Tuition in Alabama
+## Cost of Tuition in Alabama
 
 Using the datasets available, there are a few questions we can ask about how tuition has changed over time, especially as it relates to both the location, economic model, and main degree type of the college.
+
+### Summary Statistics
 
 **1. In Alabama, what was the average cost of tuition for each type of college (private, public, for-profit) in 2017-2018?**
 
@@ -107,7 +109,7 @@ cost_AL_grouped <- group_by(cost_AL,control)
 summarize(cost_AL_grouped, AY2017_mean = mean(AY2017), AY2017_sd = sd(AY2017), n = n())
 ```
 
-This was a fairly simple task, just wanting to see the average in-state cost for college in 2017-2018 in Alabama. However, it took 3 separate commandsand the creation of two extra variables to get there which isn't very efficient. Instead, we can use the `%>%` operator, a part of the `magrittr` package and the `tidyverse`. It will take the output of the command immediately preceding it and insert the output as the input for the command immediately following it.
+This was a fairly simple task, just wanting to see the average in-state cost for college in 2017-2018 in Alabama. However, it took 3 separate commands and the creation of two extra variables to get there which isn't very efficient. Instead, we can use the `%>%` operator, a part of the `magrittr` package and the `tidyverse`. It will take the output of the command immediately preceding it and insert the output as the input for the command immediately following it.
 
 So we can write the previous block of code like this instead:
 
@@ -122,9 +124,69 @@ cost_attendance %>%
 
 In this case, we were able to start with the main dataframe, perform our filtering, group by control type, and calculate out summary statistics without needing to create extra variables or execute three separate commands individually.
 
-Overall, it looks like the average cost of attending a public college in Alabama in AY 2017 was a little over $20,000 while private colleges cost more than 1.5x as much. The deviation in total cost is also twice as much for private colleges in Alabama as 
+Overall, it looks like the average cost of attending a public college in Alabama in AY 2017 was a little over $20,000 while private colleges cost more than 1.5x as much. The deviation in total cost is also twice as much for private colleges in Alabama as public colleges. 
+
+### Density Plots
+
+Means and standard deviations only tell us so much though. We can also look at the distribution using `ggplot`, the premier plotting tool in the `tidyverse`.
+
+`ggplot` works by assigning variables from a dataframe to aesthetics that make up a plot. For instance to make a simple density plot from our Alabama tuition data we used earlier:
+
+```{r basic ggplot}
+# Density plot of total cost of all colleges in Alabama in AY2017
+cost_AL %>%
+  ggplot(aes(x = AY2017)) + 
+  geom_density()
+```
+
+So most of the tuition amounts seem to be concentrated around \$20,000 per year with some in the \$30,000+ range as well. However, this graph doesn't give us a good idea of which type of institution makes up each part of the density graph. We can use a different aesthetic to split the data by a group, the `color` aesthetic:
+
+```{r AL density color}
+# Density plot split by public vs. private institution in Alabama
+cost_AL %>%
+  ggplot(aes(x = AY2017, color = control)) + 
+  geom_density()
+```
+
+We can see in this graph that there's a pretty even distribution of cost in AY2017 for private institutions compared to public colleges which have a noticeable peak at \$20,000 and a steep drop-off afterwards.
+
+#### Practice: Basic Summary Statistics and Density Plots
+
+1. What was the median total cost to attend college in NY for in-state students in AY2017? Calculate by control type and include the number of colleges in each group in the output
+2. Graph a density plot showing the distribution of total costs for AY2017. Split the graphs by control type.
+
+```{r NY stats and graphs, include = FALSE}
+cost_NY <- cost_attendance %>%
+  filter(state_code == 'NY', cost_type == 'total', in_state == 'in')
+
+cost_NY %>%
+  group_by(control) %>%
+  summarize(AY2017_mean = mean(AY2017), 
+            AY2017_sd = sd(AY2017), 
+            n = n())
+
+cost_NY %>%
+ggplot(aes(x = AY2017, color = control)) + 
+  geom_density()
+```
 
 
+### Pivoting, Mutating, and Change in Tuition Over Time
+
+It's informative to see how total costs to attend college differ based on a college's economic model, however a cross-sectional analysis can only be so informative. Next, we want to see how total costs for college have changed over time from 2009 to 2017.
+
+In order to do this, we will need to do some transformation of our data structure. Ideally, we will want a line and dot graph with academic year on the X axis and cost on the Y axis. ggplot can only assign column variables to aesthetics, so an X axis containing all of the academic year information isn't possible to create without changing how the data is structured. To fix this, we are going to pivot our data into a longer form using the `pivot_longer` function. This will take all of the academic year columns and essentially stack them into two columns, one with the year designation and the other with the cost for that year for that college.
+
+Let's continue to use the AL state information we've been using so far:
+
+```{r pivot AL}
+cost_AL_long <- cost_AL %>%
+  pivot_longer(cols = contains('AY'),
+               names_to = 'acad_year',
+               values_to = 'cost')
+
+head(cost_AL_long)
+```
 
 
 
