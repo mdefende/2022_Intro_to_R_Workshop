@@ -1,6 +1,8 @@
 ---
 title: "Introduction to R Workshop"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Workshop Overview
@@ -32,7 +34,7 @@ Packages that are installed are not immediately available to use at all times. I
 
 When working with the tidyverse, it's almost always better to load the `tidyverse` last to try and avoid function name conflicts within the tidyverse packages.
 
-```{r load packages}
+```{r load packages, results='hide', message=FALSE}
 library(rstatix)
 library(tidyverse)
 ```
@@ -42,7 +44,7 @@ library(tidyverse)
 
 For the workshop, the data we will be using are stored in basic CSV files. We can use the `read_csv` function to load these data and store them in variables. CSV files can either stored locally or can be referenced using a URL.
 
-```{r load data, results = FALSE}
+```{r load data, results='hide', message=FALSE}
 # read in tuition cost over time
 cost_attendance <- readr::read_csv('https://raw.githubusercontent.com/mdefende/2022_Intro_to_R_Workshop/main/cleaned_data/cost_of_attendance.csv')
 
@@ -50,15 +52,19 @@ cost_attendance <- readr::read_csv('https://raw.githubusercontent.com/mdefende/2
 grad_rate <- readr::read_csv('https://raw.githubusercontent.com/mdefende/2022_Intro_to_R_Workshop/main/cleaned_data/graduation_rate.csv')
 ```
 
+```{r, echo=TRUE}
+print(cost_attendance)
+```
+
+
 These data look at how tuition and total cost of attending college in the United State have changed over time. There are also data on graduation rate included for investigating possible correlations of graduation rate and tuition cost. All data come from [TuitionTracker.org](TuitionTracker.org). The variables in each table are explained below:
 
 ### Tuition Cost
 
 - `name` (character): The whole name of the college
-- `state` (character): The whole state name the college is in
 - `state_code` (character): The two letter abbreviation for the state
-- `type` (character): Is the college Private, Public, or For-Profit
-- `degree_length` (character): Ideal amount of time to receive the main degree type of the college. Either 2 Year or 4 Year
+- `control` (character): Is the college Private, Public, or For-Profit
+- `level` (character): Ideal amount of time to receive the main degree type of the college. Either 2 Year or 4 Year
 - `cost_type` (character): What kind of cost is being presented in that row. Either Tuition (plus associated fees) or Total. Total includes tuition as well as costs for a meal plan, textbooks, housing, etc. that are listed on a college's estimated costs.
 - `in_state` (character): Are the costs in the row for in-state or out-of state students.
 - `AY2009` through `AY2017` (numeric): Cost to attend the college for whole academic years 2009 through 2017. Academic years begin in the fall of the year listed and extend to spring of the following year. For example, AY2009 shows cost to attend in both Fall 2009 and Spring 2010 combined.
@@ -69,15 +75,56 @@ These data look at how tuition and total cost of attending college in the United
 - `name` and `state_code` are same as above
 - `AY2011` through `AY2016` are the same as above.
 
-## Questions About Tuition
+
+## Basic Look at Data
+
+While we have a data dictionary that tells us what each variable is in the data frame, it's always good to get a broad look at how the data are structured after they've been loaded. To do this, we can use the `glimpse` function:
+
+```{r glimpse}
+glimpse(cost_attendance)
+```
+
+
+## Average Cost of Tuition in Alabama
 
 Using the datasets available, there are a few questions we can ask about how tuition has changed over time, especially as it relates to both the location, economic model, and main degree type of the college.
 
-1. In Alabama, what was the average cost of tuition for each type of college (private, public, for-profit) in 2017-2018?
+**1. In Alabama, what was the average cost of tuition for each type of college (private, public, for-profit) in 2017-2018?**
+
+Here, we will use three functions from `dplyr`, the main data wrangling package in the `tidyverse`. We will be using:
+
+- `filter` to keep data that matches specific criteria
+- `group_by` with `summarize` to calculate some summary statistics within specific groups
 
 ```{r average AL tuition by group no pipes}
-tuition_AL <- filter(tuition_cost, state_code == 'AL', cost_type == 'total', in_state == 'in')
+# Filter the main data, keeping those with 'AL' state_codes, a 'total' cost_type, and 'in'-state costs.
+cost_AL <- filter(cost_attendance, state_code == 'AL', cost_type == 'total', in_state == 'in')
 
-tuition_AL_grouped <- group_by()
+# group by type of institutional control so that any summary statistics will be split across Public, Private, and For Profit Universities.
+cost_AL_grouped <- group_by(cost_AL,control)
+
+# calculate mean, standard deviation, and number of institutions within the groups defined above
+summarize(cost_AL_grouped, AY2017_mean = mean(AY2017), AY2017_sd = sd(AY2017), n = n())
 ```
+
+This was a fairly simple task, just wanting to see the average in-state cost for college in 2017-2018 in Alabama. However, it took 3 separate commandsand the creation of two extra variables to get there which isn't very efficient. Instead, we can use the `%>%` operator, a part of the `magrittr` package and the `tidyverse`. It will take the output of the command immediately preceding it and insert the output as the input for the command immediately following it.
+
+So we can write the previous block of code like this instead:
+
+```{r average AL tuition by group with pipes}
+cost_attendance %>%
+  filter(state_code == 'AL', cost_type == 'total', in_state == 'in') %>%
+  group_by(control) %>%
+  summarize(AY2017_mean = mean(AY2017), 
+            AY2017_sd = sd(AY2017), 
+            n = n())
+```
+
+In this case, we were able to start with the main dataframe, perform our filtering, group by control type, and calculate out summary statistics without needing to create extra variables or execute three separate commands individually.
+
+Overall, it looks like the average cost of attending a public college in Alabama in AY 2017 was a little over $20,000 while private colleges cost more than 1.5x as much. The deviation in total cost is also twice as much for private colleges in Alabama as 
+
+
+
+
 
