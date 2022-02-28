@@ -1,0 +1,83 @@
+---
+title: "Introduction to R Workshop"
+output: html_notebook
+---
+
+# Workshop Overview
+
+## Basic R
+
+- `dataframe`: the most common type of data structure in R. Essentially a spreadsheet where each column in the dataframe is a variable that describes the observed unit for any given row. A `tibble` is a slightly fancier dataframe used by the tidyverse.
+- `?`: using the `?` operator with a function name will being up the help screen for that
+- `<-`: assignment operator. Assigns a value to a variable so the variable can be used later.
+- `%>%`: pipe operator. takes the output of one operation and inserts it as the input to the next operation.
+
+## Packages
+
+While a number of functions are available in base R, the beauty of R is that there are a huge number of publicly available, open-source packages to make your data analysis life easier. R packages are generally housed and maintained on the [CRAN](https://cran.r-project.org/) website, however a number of packages can be installed from Github and other hosting sites as well.
+
+### Installation
+
+The packages we will use in this workshop are `rstatix` and the `tidyverse` suite of packages. If you have not installed these previously, they can be installed using the following command:
+
+```{r install packages, eval=FALSE}
+install.packages(c('rstatix','tidyverse'))
+```
+
+The packages installation wizard in RStudio can also be used by clicking the Packages tab in the bottom right panel and then clicking Install in the panel's control bar.
+
+### Loading Packages
+
+Packages that are installed are not immediately available to use at all times. In order to directly access a package's commands, it needs to be loaded into the environment using the `library` command.
+
+When working with the tidyverse, it's almost always better to load the `tidyverse` last to try and avoid function name conflicts within the tidyverse packages.
+
+```{r load packages}
+library(rstatix)
+library(tidyverse)
+```
+
+
+## Loading Data
+
+For the workshop, the data we will be using are stored in basic CSV files. We can use the `read_csv` function to load these data and store them in variables. CSV files can either stored locally or can be referenced using a URL.
+
+```{r load data, results = FALSE}
+# read in tuition cost over time
+cost_attendance <- readr::read_csv('https://raw.githubusercontent.com/mdefende/2022_Intro_to_R_Workshop/main/cleaned_data/cost_of_attendance.csv')
+
+# read in graduation rate data over time
+grad_rate <- readr::read_csv('https://raw.githubusercontent.com/mdefende/2022_Intro_to_R_Workshop/main/cleaned_data/graduation_rate.csv')
+```
+
+These data look at how tuition and total cost of attending college in the United State have changed over time. There are also data on graduation rate included for investigating possible correlations of graduation rate and tuition cost. All data come from [TuitionTracker.org](TuitionTracker.org). The variables in each table are explained below:
+
+### Tuition Cost
+
+- `name` (character): The whole name of the college
+- `state` (character): The whole state name the college is in
+- `state_code` (character): The two letter abbreviation for the state
+- `type` (character): Is the college Private, Public, or For-Profit
+- `degree_length` (character): Ideal amount of time to receive the main degree type of the college. Either 2 Year or 4 Year
+- `cost_type` (character): What kind of cost is being presented in that row. Either Tuition (plus associated fees) or Total. Total includes tuition as well as costs for a meal plan, textbooks, housing, etc. that are listed on a college's estimated costs.
+- `in_state` (character): Are the costs in the row for in-state or out-of state students.
+- `AY2009` through `AY2017` (numeric): Cost to attend the college for whole academic years 2009 through 2017. Academic years begin in the fall of the year listed and extend to spring of the following year. For example, AY2009 shows cost to attend in both Fall 2009 and Spring 2010 combined.
+
+### Graduation Rate
+
+- `unit_id` (numeric): a unique identification code given to each college on the [Tuition Tracker](TuitionTracker.org) site.
+- `name` and `state_code` are same as above
+- `AY2011` through `AY2016` are the same as above.
+
+## Questions About Tuition
+
+Using the datasets available, there are a few questions we can ask about how tuition has changed over time, especially as it relates to both the location, economic model, and main degree type of the college.
+
+1. In Alabama, what was the average cost of tuition for each type of college (private, public, for-profit) in 2017-2018?
+
+```{r average AL tuition by group no pipes}
+tuition_AL <- filter(tuition_cost, state_code == 'AL', cost_type == 'total', in_state == 'in')
+
+tuition_AL_grouped <- group_by()
+```
+

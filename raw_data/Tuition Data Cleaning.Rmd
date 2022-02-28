@@ -22,7 +22,7 @@ This document shows how the dataset used in the Intro to R Workshop during Resea
 # read in data, clean variable names, remove unit id, institution alias, street address, and city, and finally rename institution and state variables
 cost_attendance_raw <- read_csv('cost-attendance.csv') %>%
   clean_names() %>%
-  select(-unit_id, -institution_name_alias_hd2016, -street_address_or_post_office_box_hd2016, -city_location_of_institution_hd2016) %>%
+  select(-institution_name_alias_hd2016, -street_address_or_post_office_box_hd2016, -city_location_of_institution_hd2016) %>%
   rename(name = institution_name,
          state_code = state_abbreviation_hd2016)
 ```
@@ -84,23 +84,40 @@ cost_attendance <- cost_attendance %>%
   filter(name %in% keep_schools$name)
 ```
 
-## Merge TidyTuesday Data
+## Degree Type and Economic Model Information
 
-The Tidy Tuesday version of these data have useful information about the colleges in the `tuition_cost` dataset. All we want from this dataset is the type of university and the degree length the college is. The costs listed in these data are for a single year only, which isn't useful when we want to examine trends over time
+Some other interesting information is whether a university is a 2-year vs 4-year institution and whether it is public, private, or for-profit. These categories can be informative to general trends in tuition within each of these groups. Tuition Tracker originally downloads data from [IPEDS](https://nces.ed.gov/ipeds/use-the-data) which is where I downloaded these data from as well.
 
-```{r load tuition_cost data}
-# read in the data and only keep the variables that are a character data type
-tuition_cost <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-10/tuition_cost.csv') %>%
-  select(where(is.character))
+### Economic Model Information
+
+```{r load net price data}
+inst_info <- read_csv('institution-information.csv') %>%
+  clean_names()
+
+# rename some of the columns
+inst_info <- inst_info %>%
+  rename(name = institution_name,
+         state_code = state_abbreviation_hd2016) %>%
+  rename_with(~str_remove(.,'_of_institution_hd2016'), .cols = contains('_of_institution_hd2016'))
 ```
 
-```{r merge tuition_cost with cost_attendance}
-cost_attendance <- tuition_cost %>%
-  right_join(cost_attendance, by = c('name','state_code'))
+```{r}
+# select the columns we want and change them to factors with their descriptions
+inst_info <- inst_info %>%
+  select(unit_id,name,state_code,level,control) %>%
+  filter(level != 3) %>%
+  mutate(level = factor(level, levels = c(1,2), labels = c('4 Year','2 Year')),
+         control = factor(control, levels = c(1,2,3), labels = c('Public','Private','For Profit')))
 ```
 
 
-## Graduation Rate
+```{r merge cost_attendance with inst_info}
+cost_attendance <- inst_info %>%
+  right_join(cost_attendance, by = c('unit_id','name','state_code'))
+```
+
+
+## Graduation Rate and Degree Type
 
 ```{r load graduation rate data}
 graduation <- read_csv('grad-rates.csv') %>%
@@ -131,8 +148,17 @@ graduation <- graduation %>%
 
 ## Write Cleaned Data
 
-```{r}
-write_csv(cost_attendance,'../cleaned_data/cost_of_attendance.csv')
+```{r write cleaned data}
+# filter out some of the variables to make the data more succinct. Only need costs for on-campus students. Also remove all colleges who do not have data for all years
+cost_attendance %>%
+  filter(on_campus == 'on') %>%
+  filter(if_all(where(is.numeric),~!is.na(.))) %>%
+  select(-on_campus,-living_with_family)
+
+# somehow removed only tuition cost from the table, need to go back and check where.
+
+  
+write_csv('../cleaned_data/cost_of_attendance.csv')
 write_csv(graduation,'../cleaned_data/graduation_rate.csv')
 ```
 
