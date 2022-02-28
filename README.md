@@ -4,22 +4,14 @@ This repo houses the raw and cleaned data as well as the R Markdown files with c
 
 There are some brief instructions for users prior to the beginning of the workshop regarding installing specific packages for those who have not used R at all before.
 
-## Requesting an RStudio Job (For users using Cheaha)
+## Software Installation
 
-1. Please go to https://rc.uab.edu. If you do not have a Cheaha account, you will directed to create one by filling out a very short form. Once the form is complete, your account with be ready.
+For this workshop, we will use R and RStudio on our laptops. Each of these pieces of software is available for free. follow the links to download:
 
-2. Click on Interactive Apps > RStudio Server
+R: https://mirrors.nics.utk.edu/cran/
 
-3. Use the following inputs for the job:
-   - R Version: 4.0.2
-   - Number of Hours: 4
-   - Partition: amd-hdr100
-   - Number of CPU: 1
-   - Memory Per CPU: 8
+RStudio: https://www.rstudio.com/products/rstudio/download/. Choose the free RStudio Desktop version on the far left column. DO NOT DOWNLOAD THE RSTUDIO SERVER OR A PAID VERSION.
 
-4. Click `Launch`. The job will be entered into the queue. The card created for the job will remain grayed out while the job is being scheduled. This may take a little while depending on the cluster workload. Once the card turns green, the job will have been allocated resources and you will have access to the RStudio program
-
-5. Click `Open RStudio Server`.
 
 ## Package Installation
 
