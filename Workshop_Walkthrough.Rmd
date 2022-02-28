@@ -175,7 +175,7 @@ ggplot(aes(x = AY2017, color = control)) +
 
 It's informative to see how total costs to attend college differ based on a college's economic model, however a cross-sectional analysis can only be so informative. Next, we want to see how total costs for college have changed over time from 2009 to 2017.
 
-In order to do this, we will need to do some transformation of our data structure. Ideally, we will want a line and dot graph with academic year on the X axis and cost on the Y axis. ggplot can only assign column variables to aesthetics, so an X axis containing all of the academic year information isn't possible to create without changing how the data is structured. To fix this, we are going to pivot our data into a longer form using the `pivot_longer` function. This will take all of the academic year columns and essentially stack them into two columns, one with the year designation and the other with the cost for that year for that college.
+In order to do this, we will need to do some transformation of our data structure. Ideally, we will want a line and dot graph with academic year on the X axis and cost on the Y axis. ggplot can only assign column variables to aesthetics, so an X axis containing all of the academic year information isn't possible to create without changing how the data is structured. To fix this, we are going to pivot our data into a longer form using the `pivot_longer` function. This will take all of the academic year columns and essentially stack them into two columns, one with the year designation and the other with the cost for that year for that college. To see information on how to use the `pivot_longer` function (or any other function), use the command `?pivot_longer`.
 
 Let's continue to use the AL state information we've been using so far:
 
@@ -185,8 +185,89 @@ cost_AL_long <- cost_AL %>%
                names_to = 'acad_year',
                values_to = 'cost')
 
-head(cost_AL_long)
+head(cost_AL_long,7)
+```
+
+Now we have a single variable for academic year and a single variable for the cost, as opposed to spreading that cost over multiple academic year variables like we had previously. Now, we can set our X axis to be the academic year and our Y axis to be the cost.
+
+```{r AL cost dot plot}
+cost_AL_long %>%
+  ggplot(aes(x = acad_year, y = cost)) +
+  geom_point()
+```
+
+As we can see, there's a large spread of costs within each year, but there's a general increasing trend across years (as anyone who has paid for college recently can attest). Same as with the density plot though, we want to be able to differentiate by type of college. We can use the `color` aesthetic just like before.
+
+```{r AL cost dot plot split control}
+cost_AL_long %>%
+  ggplot(aes(x = acad_year, y = cost, color = control)) +
+  geom_point(position = position_dodge(width = 0.5))
+```
+
+To better visually separate the private colleges from the public colleges, we added a `position` option to the point geom to offset the location of the points. The `position_dodge` function dodges based the most fine-scale group specified in the aesthetics for the given geom. If we had specified the `name` variable as one of our grouping aesthetics, `position_dodge` would have dodged the points based on that instead.
+
+#### Practice: Plotting Over Time
+1. Graph a scatterplot for total cost of tuition in NY colleges over each year. Separate the groups of points by the control variable.
+
+```{r cost NY over time}
+cost_NY_long <- cost_NY %>%
+  pivot_longer(contains('AY'),names_to = 'acad_year', values_to = 'cost')
+
+cost_NY_long %>%
+  ggplot(aes(x = acad_year, y = cost, color = control)) +
+  geom_point(position = position_dodge(width = 0.8)) 
 ```
 
 
+### Calculating Non-Tuition Costs
+
+In our dataset, we have data on both total costs and tuition-only costs. To now, we have only been concerned with the total costs, however tuition and extraneous costs such as housing and meal plans may be contributing differently to the overall rise in cost for college. Calculating these extraneous costs is simple formula-wise. It is the total costs minus the cost of tuition. 
+
+To calculate these in R, we will use the `mutate` function. This function adds another column to the data containing some value we set it to. This value can be either a set value ('A', 12, TRUE, or any other single value), or it can be a function of columns in the dataset. Before we use it, let's take a quick look at our main data again:
+
+```{r}
+head(cost_attendance)
+```
+
+In it, we still have out costs per year divided into multiple columns, but the `cost_type` is in a single column. To use `mutate` effectively here, we first need to flip the year information and cost into two columns like we did previously, then we need to perform an opposite pivot using `pivot_wider` to put the total cost and the tuition-only cost into separate columns. For this and future exercises, we are going to go ahead and filter out out-of-state costs as well since data for tuition costs are only listed for in-state students.
+
+```{r pivoting main table}
+# filter out the out-of-state costs and store only the in-state costs in a separate dataframe for later. Can also remove the in_state variable since it only has a single unique value in it now
+cost_in <- cost_attendance %>%
+  filter(in_state == 'in') %>%
+  select(-in_state)
+
+# pivot_longer just like previous exercises to get academic year and cost into individual columns
+cost_in_long <- cost_in %>%
+  pivot_longer(contains('AY'), names_to = 'acad_year', values_to = 'cost')
+
+# use pivot_wider to separate total and tuition costs into separte columns
+cost_in_wide <- cost_in_long %>%
+  pivot_wider(names_from = cost_type, values_from = cost)
+
+head(cost_in_wide)
+```
+
+Now we have academic year information in a single column and total and tuition costs in separate columns. At this point, we can easily mutate our dataframe to add a column for extraneous costs set to the difference between total and tuition costs.
+
+```{r add extraneous costs}
+cost_in_wide <- cost_in_wide %>%
+  mutate(extraneous = total - tuition)
+
+head(cost_in_wide)
+```
+
+
+Let's see what the average extraneous costs costs are for schools in Alabama broken down by academic year and type of college.
+
+```{r extraneous stats}
+instate_extraneous_stats_AL <- cost_in_wide %>%
+  filter(state_code == 'AL') %>%
+  group_by(control,acad_year) %>%
+  summarize(mean_ex = mean(extraneous),
+            sd_ex   = sd(extraneous),
+            n       = n())
+
+head(instate_extraneous_stats_AL, n = Inf)
+```
 
