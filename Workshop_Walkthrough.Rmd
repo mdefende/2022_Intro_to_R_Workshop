@@ -3,6 +3,7 @@ title: "Introduction to R Workshop"
 output:
   html_document:
     df_print: paged
+    toc: TRUE
 ---
 
 # Workshop Overview
@@ -264,10 +265,154 @@ Let's see what the average extraneous costs costs are for schools in Alabama bro
 instate_extraneous_stats_AL <- cost_in_wide %>%
   filter(state_code == 'AL') %>%
   group_by(control,acad_year) %>%
-  summarize(mean_ex = mean(extraneous),
-            sd_ex   = sd(extraneous),
+  summarize(mean_ext = mean(extraneous),
+            sem_ext  = sd(extraneous)/sqrt(n()),
             n       = n())
 
 head(instate_extraneous_stats_AL, n = Inf)
+```
+
+Now we can take these descriptive statistics and plot them across group and year, this time adding error bars for the standard error of the mean we calculated previously:
+
+```{r}
+instate_extraneous_stats_AL %>%
+  ggplot(aes(x = acad_year, y = mean_ext, color = control)) +
+  geom_point(position = position_dodge(width = 0.5)) +
+  geom_errorbar(aes(ymin = mean_ext-sem_ext, ymax = mean_ext+sem_ext),position = position_dodge(width = 0.5), width = 0.3)
+```
+
+
+We can see that in 2009, the average extraneous expenses were lower for both Private and Public colleges compared to in 2017, but it seems like these extraneous expenses have increased at a faster rate for public colleges than private ones contributing to a rise in overall cost of college.
+
+#### Practice: Calculating and Plotting Group Statistics
+
+1. Calculate the mean and standard error of just the cost of tuition for schools in Georgia. Plot the mean and add the error bars, and split by control.
+
+```{r }
+GA_tuition <- cost_attendance %>%
+  filter(state_code == 'GA', cost_type == 'tuition') %>%
+  pivot_longer(contains('AY'), names_to = 'acad_year', values_to = 'cost')
+  
+GA_tuition_stats <- GA_tuition %>%
+  group_by(control, acad_year) %>%
+  summarize(mean_cost = mean(cost),
+            sem_cost = sd(cost)/sqrt(n()),
+            n = n())
+
+GA_tuition_stats %>%
+  ggplot(aes(x = acad_year, y = mean_cost, color = control)) +
+  geom_point(position = position_dodge(width = 0.5), size = 2) +
+  geom_errorbar(aes(ymin = mean_cost-sem_cost,
+                    ymax = mean_cost+sem_cost),
+                position = position_dodge(width = 0.5), 
+                width = 0.4,
+                size = 1)
+```
+
+
+
+
+## Inferential Statistics
+
+R was originally built by statisticians for statisticians. It has a huge variety of open-source statistical packages for basically any type of analysis someone can think of. There are some built-in inferential stats functions such as `lm` for linear modelling and `t.test` for performing a basic t-test. However, for (slightly) more complex stats like the ANOVA family and multi-level modelling, you will should use packages outside of base R. 
+
+Note: R does come with base `aov` and `anova` functions for performing ANOVAs, but both of these only calculate Type 1 sums of squares which is improper for some analyses. The `rstatix` package (more accurately the `car` package that `rstatix` co-opts) provides a more robust framework for ANOVAs and other simple statistical tests than base R does.
+
+Here, we will do a quick example looking at a comparison of tuition cost between public and private colleges in New York. We will filter out For Profit colleges due to the very small sample size compared to the other groups. We've seen through graphs that private colleges are generally much more expensive in terms of tuition than public colleges, but this will be more of a proof of concept than used for any real ground-breaking analysis.
+
+`rstatix` supports the pipe framework so we can easily perform filtering commands before piping the output into the statistical function we want to use.
+
+```{r}
+cost_attendance %>%
+  filter(state_code == 'NY', control != 'For Profit', cost_type == 'tuition') %>%
+  t_test(AY2017 ~ control)
+```
+
+We could also, perform an ANOVA testing the hypothesis that tuition costs for public colleges differed across states in 2017. Again, this isn't a very meaningful statistical test but more for sake of example given our data.
+
+```{r}
+cost_attendance %>%
+  filter(control == 'Public', cost_type == 'tuition') %>%
+  anova_test(AY2017 ~ state_code) %>%
+  get_anova_table()
+```
+
+
+## Extra: Making a Prettier Graph
+
+The basic ggplot output graphs are better than Matlab and Excel graphs, but not by too much. There is a large amount of power stored in ggplot to alter pretty much everything about your graph that you would like, down to something as small as the pixel size of the tick marks on the axes.
+
+As an example, let's take the graph from the last practice plotting Georgia tuition cost as a function of academic year and institutional control. While plotting a mean and standard error can be informative, plotting the entire distribution of the sample as a backdrop can add context for the viewer. 
+
+If you remember, these non-summarized data are stored in the `GA_tuition` dataframe above. We can add a second `geom_point` layer and manually set the data to come from the non-summarized dataframe. This layer will come first so the average value is plotted on top. We will also adjust the transparency of these points using the `alpha` aesthetic and set it to be 0.5, or half transparent. From there, we can add the summarized mean and SEM layers afterwards.
+
+```{r GA tuition with indiv point backdrop}
+GA_tuition_stats %>%
+  ggplot(aes(x = acad_year, y = mean_cost)) +
+  
+  # plot individual data points for each college
+  geom_point(data     = GA_tuition, 
+             mapping  = aes(x = acad_year, 
+                            y = cost, 
+                            color = control), 
+             position = position_dodge(width = 0.5),
+             alpha = 0.5) +
+  
+  # plot the mean and standard error of each group, changing the size of both and adding the `group` aesthetic instead of color so the color of these layers will be black and will stand out from the colored individual points.
+  geom_point(mapping  = aes(group = control),
+             position = position_dodge(width = 0.5),
+             size     = 2) +
+  geom_errorbar(aes(ymin = mean_cost-sem_cost, 
+                    ymax = mean_cost+sem_cost,
+                    group = control),
+                position = position_dodge(width = 0.5), 
+                width = 0.4,
+                size = 1)
+```
+
+Since we've set up the data itself to be more informative and still look good (depending on who you ask), we need to make adjustments to the axis values and labels, the the title, and some general theme cleanup such as removing the gray background. All of these changes can be seen in the plot below. The comments above each command explain exactly what is happening.
+
+```{r GA tuition with full formatting}
+GA_tuition_stats %>%
+  ggplot(aes(x = acad_year, y = mean_cost)) +
+  
+  # plot individual data points for each college using non-summarized data
+  geom_point(data     = GA_tuition, 
+             mapping  = aes(x = acad_year, 
+                            y = cost, 
+                            color = control), 
+             position = position_dodge(width = 0.5),
+             alpha = 0.5) +
+  
+  # plot the mean and standard error of each group, changing the size of both and adding the `group` aesthetic instead of color so the color of these layers will be black and will stand out from the colored individual points.
+  geom_point(mapping  = aes(group = control),
+             position = position_dodge(width = 0.5),
+             size     = 2) +
+  
+  geom_errorbar(aes(ymin = mean_cost-sem_cost, 
+                    ymax = mean_cost+sem_cost,
+                    group = control),
+                position = position_dodge(width = 0.5), 
+                width = 0.4,
+                size = 1) +
+  
+  # set the labels to be just the beginning year, dropping the AY string
+  scale_x_discrete(labels = 2009:2017) +
+  
+  # set the y-axis to be formatted as dollars
+  scale_y_continuous(labels=scales::dollar_format()) +
+  
+  # add axis and legend labels as well as a plot title
+  labs(x = 'Academic Year',
+       y = 'Cost of Tuition (USD)',
+       title = 'Comparison of Cost of Tuition in Georgia',
+       color = 'Control of\nCollege') +
+  
+  # use the standard minimal theme to make the graph look generally better
+  theme_minimal() +
+  
+  # set the plot title to be centered and increase the font size
+  theme(plot.title = element_text(hjust = 0.5, size = 14))
+
 ```
 
