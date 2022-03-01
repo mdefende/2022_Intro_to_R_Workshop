@@ -416,3 +416,11 @@ GA_tuition_stats %>%
 
 ```
 
+## Suggested Resources
+
+There are a huge number of resources out there for learning R and the tidyverse. The tidyverse is much larger than the examples shown here, even as far as basic functions go. For example, during an analysis you may need to combine data from multiple sources together, keeping or removing certain rows based on whether data is missing or not. For this, look into the family of `join` commands that are a part of the tidyverse. This is again just one more thing, but here are a list of resources I've found helpful in the past to look into for what R and the tidyverse can do for you:
+
+- [R For Data Science](https://r4ds.had.co.nz/): A free textbook teaching the basics of the tidyverse by the person who created it
+- [RStudio Cheatsheets](https://www.rstudio.com/resources/cheatsheets/): A large series of cheatsheets for a variety of packages such as dplyr, ggplot, purrr, and others
+- [TidyModels](https://www.tidymodels.org/): A suite of packages designed to make creation of machine learning models easier. These models can range from simple linear models to complex tree based models and beyond. It can also handle cross-validation and hyperparameter tuning using either grid search or Bayesian methods.
+- [purrr](https://purrr.tidyverse.org/): Functional programming in R
